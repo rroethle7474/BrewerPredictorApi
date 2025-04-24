@@ -1,36 +1,93 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using BrewerPredictorApi.Models.Dtos;
+using BrewerPredictorApi.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BrewerPredictorApi.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
-    public class MessagesController : Controller
+    [Route("api/[controller]")]
+    public class MessagesController : ControllerBase
     {
-        [HttpGet]
-        public IEnumerable<string> Get()
-        {
-            return new string[] { "value1", "value2" };
-        }
+        private readonly IMessageService _messageService;
+        private readonly ILogger<MessagesController> _logger;
 
-        [HttpGet("{id}")]
-        public string Get(int id)
+        public MessagesController(IMessageService messageService, ILogger<MessagesController> logger)
         {
-            return "value";
+            _messageService = messageService;
+            _logger = logger;
         }
 
         [HttpPost]
-        public void Post([FromBody] string value)
+        public async Task<IActionResult> AddMessage([FromBody] MessageRequestDto messageRequest)
         {
+            try
+            {
+                var message = await _messageService.AddMessageAsync(messageRequest);
+                return CreatedAtAction(nameof(GetMessage), new { id = message.Id }, message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding message");
+                return StatusCode(500, "An error occurred while adding message");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetMessages([FromQuery] int? id = null, [FromQuery] string name = null)
+        {
+            try
+            {
+                var messages = await _messageService.GetMessagesAsync(id, name);
+                return Ok(messages);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving messages");
+                return StatusCode(500, "An error occurred while retrieving messages");
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetMessage(int id)
+        {
+            try
+            {
+                var messages = await _messageService.GetMessagesAsync(id);
+                var message = messages.FirstOrDefault();
+                
+                if (message == null)
+                    return NotFound();
+                    
+                return Ok(message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving message with ID {id}");
+                return StatusCode(500, "An error occurred while retrieving message");
+            }
         }
 
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        public async Task<IActionResult> EditMessage(int id, [FromBody] MessageRequestDto messageRequest)
         {
-        }
-
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
+            try
+            {
+                var message = await _messageService.EditMessageAsync(id, messageRequest);
+                
+                if (message == null)
+                    return NotFound();
+                    
+                return Ok(message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error editing message with ID {id}");
+                return StatusCode(500, "An error occurred while editing message");
+            }
         }
     }
 }
