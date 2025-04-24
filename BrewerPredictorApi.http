@@ -1,0 +1,6 @@
+@BrewerPredictorApi_HostAddress = http://localhost:5010
+
+GET {{BrewerPredictorApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
